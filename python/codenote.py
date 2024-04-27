@@ -7,6 +7,13 @@ from abc import ABC, abstractmethod
 import subprocess
 
 
+def diff_strs(a: list[str], b: list[str]) -> str:
+    import difflib
+
+    diff = difflib.unified_diff(a, b)
+    return "\n".join(diff)
+
+
 class FileCache:
     class CacheItem:
         def __init__(self, content):
@@ -381,6 +388,7 @@ class ParseLineProcessor(ABC):
     def __init__(self, args, storage: Storage):
         self.args = args
         self.storage = storage
+        self._current_md_file: Optional[pathlib.Path] = None
 
     def execute(self, mdfile_content) -> Optional[list[str]]:
         i = 0
@@ -409,16 +417,24 @@ class ParseLineProcessor(ABC):
     def process_files(self):
         # glob all markdown files in noterepo
         for mdfile in pathlib.Path(self.args.noterepo).rglob("*.md"):
-            with open(mdfile, "r+") as f:
-                content = f.readlines()
-                new_content = self.execute(content)
-                if new_content is not None:
-                    f.seek(0)
-                    f.writelines(new_content)
-                    f.truncate()
+            self.process_file(mdfile)
+
+    def process_file(self, mdfile: pathlib.Path):
+        self._current_md_file = mdfile
+        with open(mdfile, "r+") as f:
+            content = f.readlines()
+            new_content = self.execute(content)
+            if new_content is not None:
+                f.seek(0)
+                f.writelines(new_content)
+                f.truncate()
+        self._current_md_file = None
 
     @abstractmethod
     def update_new_content(self, snippet: Snippet, new_content: list, i: int) -> int:
+        """
+        i: current line index, start from 0
+        """
         pass
 
 
@@ -427,16 +443,22 @@ class SaveToStorageProcessor(ParseLineProcessor):
     Allocate snippet_id for snippet that does not have one.
     """
 
+    def __init__(self, args, storage):
+        super().__init__(args, storage)
+        self.vim_quickfix_list = []
+
     def update_new_content(self, snippet: Snippet, new_content: list, i: int) -> int:
-        assert (
-            snippet.code_content == snippet.fenced_block_inner_content
-        ), "Inconsistent code and note content."
-        if len(snippet.head_line.submodule) == 0:
-            snippet.head_line.submodule = self.args.submodule
-        if snippet.head_line.git_version is None:
-            snippet.head_line.git_version = self.args.commit
-        if snippet.head_line.snippet_id is None:
-            snippet.save_unstaged_to_storage(self.storage)
+        if snippet.code_content == snippet.fenced_block_inner_content:
+            if len(snippet.head_line.submodule) == 0:
+                snippet.head_line.submodule = self.args.submodule
+            if snippet.head_line.git_version is None:
+                snippet.head_line.git_version = self.args.commit
+            if snippet.head_line.snippet_id is None:
+                snippet.save_unstaged_to_storage(self.storage)
+        else:
+            self.vim_quickfix_list.append(
+                f"{self._current_md_file}:{i+1}: {str(snippet.head_line)}"
+            )
         note_snippet = snippet.note_snippet
         new_content.extend(note_snippet)
         assert i + len(note_snippet) == snippet.note_fenced_block_end_idx + 1
@@ -638,6 +660,7 @@ def parse_args():
     )
     save_to_storage_parser.add_argument("--commit", help="Commit hash.", required=True)
     save_to_storage_parser.add_argument("--coderepo", required=True)
+    save_to_storage_parser.add_argument("--note-file", dest="note_file")
 
     rebase_parser = subparsers.add_parser(
         "rebase", help="Rebase to current coderepo commit."
@@ -681,7 +704,13 @@ def main():
     match args.command:
         case "save":
             if validate_current_commit(args.coderepo, args.commit, args.submodule):
-                SaveToStorageProcessor(args, storage).process_files()
+                processor = SaveToStorageProcessor(args, storage)
+                if args.note_file is not None:
+                    processor.process_file(args.note_file)
+                else:
+                    processor.process_files()
+                for qf in processor.vim_quickfix_list:
+                    print(qf)
         case "rebase":
             if validate_current_commit(args.coderepo, args.commit, args.submodule):
                 RebaseToCurrentProcessor(args, storage).process_files()

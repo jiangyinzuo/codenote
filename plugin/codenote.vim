@@ -4,10 +4,14 @@ command -nargs=0 OpenCodeRepo call codenote#OpenCodeRepo()
 command -nargs=0 RefreshCodeLinks call codenote#GetAllCodeLinks()
 
 command -nargs=1 CodenoteCheck call codenote#py#Check(<q-args>)
+command -nargs=0 CodenoteCheckHEAD call codenote#py#Check(codenote#py#GetCodeRepoCommit())
 command -nargs=1 CodenoteCheckout call codenote#py#Checkout(<q-args>)
+command -nargs=0 CodenoteCheckoutHEAD call codenote#py#Checkout(codenote#py#GetCodeRepoCommit())
 command -nargs=1 CodenoteCheckoutAll call codenote#py#CheckoutAll(<q-args>)
-command -nargs=1 CodenoteRebaseToCurrent call codenote#py#RebaseToCurrent(<q-args>)
-command -nargs=1 CodenoteSave call codenote#py#Save(<q-args>)
+command -nargs=0 CodenoteCheckoutAllHEAD call codenote#py#CheckoutAll(codenote#py#GetCodeRepoCommit())
+command -nargs=0 CodenoteRebaseToHEAD call codenote#py#RebaseToCurrent(codenote#py#GetCodeRepoCommit())
+command -nargs=0 CodenoteSaveAllHEAD call codenote#py#Save(codenote#py#GetCodeRepoCommit(), '')
+command -nargs=0 CodenoteSaveCurrentFileHEAD call codenote#py#Save(codenote#py#GetCodeRepoCommit(), expand('%:p'))
 command -nargs=0 CodenoteShowDB call codenote#py#ShowDB()
 
 " need_beginline, need_endline, append, goto_buf

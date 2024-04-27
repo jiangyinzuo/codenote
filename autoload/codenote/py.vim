@@ -33,8 +33,18 @@ function codenote#py#CheckoutAll(commit)
 	call s:execute_with_code_note_commit('checkout-all', a:commit)
 endfunction
 
-function codenote#py#Save(commit)
-	call s:execute_with_code_note_commit('save', a:commit)
+function codenote#py#Save(commit, file)
+	call codenote#check()
+	let l:cmd = s:codenote_py_submodule_noterepo() . ' save --commit=' . a:commit . ' --coderepo=' . g:coderepo_dir
+	if len(a:file) > 0
+		let l:cmd .= ' --note-file=' . a:file
+	endif
+	let l:result = system(l:cmd)
+	if v:shell_error
+		echom l:result
+	else
+		:cexpr l:result
+	endif
 endfunction
 
 function codenote#py#Check(commit)
@@ -49,4 +59,8 @@ function codenote#py#ShowDB()
 	call codenote#check()
 	let l:cmd = s:codenote_py_submodule_noterepo() . ' show-db'
 	exe ':!' . l:cmd
+endfunction
+
+function codenote#py#GetCodeRepoCommit()
+	return system('cd ' . g:coderepo_dir. ' && git rev-parse HEAD')->trim()
 endfunction
