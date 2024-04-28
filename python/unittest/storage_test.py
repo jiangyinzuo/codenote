@@ -24,3 +24,4 @@ def test_db():
         assert result == SnippetValue(2, 2, "int main()")
         result = db.select_snippet_count()
         assert result == 10
+        assert db.select_all_git_versions() == {"v1.0.0", "vv"}

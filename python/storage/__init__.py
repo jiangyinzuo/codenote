@@ -66,5 +66,9 @@ class Storage(ABC):
     def select_all(self) -> Any:
         pass
 
+    @abstractmethod
+    def select_all_git_versions(self) -> set[str]:
+        pass
+
     def name(self) -> str:
         return self.__class__.__name__

@@ -695,6 +695,7 @@ def parse_args():
     checkout_all_parser.add_argument("--coderepo", required=True)
 
     subparsers.add_parser("show-db", help="Show database content.")
+    subparsers.add_parser("show-commits", help="Show commits.")
     return parser.parse_args()
 
 
@@ -723,6 +724,9 @@ def main():
             CheckoutProcessor(args, storage).process_files()
         case "show-db":
             print(storage.select_all_snippet_head_lines())
+        case "show-commits":
+            for commits in storage.select_all_git_versions():
+                print(commits, end=' ')
         case _:
             raise NotImplementedError()
 

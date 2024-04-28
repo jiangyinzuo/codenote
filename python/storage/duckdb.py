@@ -95,3 +95,7 @@ FROM snippet WHERE id = ? AND submodule = ? AND git_version = ?;
     def select_all(self):
         result = self.con.sql("SELECT * FROM snippet").fetchall()
         return result
+
+    def select_all_git_versions(self) -> set[str]:
+        result: list[tuple] = self.con.sql("SELECT DISTINCT git_version FROM snippet").fetchall()
+        return set(x[0] for x in result)

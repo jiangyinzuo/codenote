@@ -44,5 +44,8 @@ class MemoryStore(Storage):
     def select_snippet_count(self) -> int:
         return len(self.snippets)
 
+    def select_all_git_versions(self) -> set[str]:
+        return set(key.git_version for key in self.snippets)
+
     def select_all(self):
         return self.snippets

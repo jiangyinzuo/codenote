@@ -64,3 +64,9 @@ endfunction
 function codenote#py#GetCodeRepoCommit()
 	return system('cd ' . g:coderepo_dir. ' && git rev-parse HEAD')->trim()
 endfunction
+
+function codenote#py#GetAllCommits()
+	call codenote#check()
+	let l:cmd = s:codenote_py_submodule_noterepo() . ' show-commits'
+	return system(l:cmd)
+endfunction

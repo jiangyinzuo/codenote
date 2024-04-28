@@ -145,7 +145,7 @@ function s:GoToCodeLink()
 		echo l:line l:file
 	endif
 
-	if s:only_has_one_repo()
+	if codenote#only_has_one_repo()
 		call codenote#OpenCodeRepo()
 	else
 		call s:goto_code_buffer()
@@ -160,7 +160,7 @@ function s:GoToNoteLink()
 	let l:pattern = s:filepath(l:file, l:line)
 	" 将 / 转义为 \/
 	let l:pattern = substitute(l:pattern, "/", "\\\\/", "g")
-	if s:only_has_one_repo()
+	if codenote#only_has_one_repo()
 		call codenote#OpenNoteRepo()
 	else
 		call s:goto_note_buffer()
@@ -191,7 +191,7 @@ function codenote#OpenCodeRepo()
 	call codenote#GetAllCodeLinks()
 endfunction
 
-function s:only_has_one_repo()
+function codenote#only_has_one_repo()
 	return tabpagenr('$') == 1
 endfunction
 
@@ -235,7 +235,7 @@ function codenote#YankCodeLink(need_beginline, need_endline, append, goto_buf)
 	let l:content = getline(".")
 	call s:yank_registers(l:file, l:line, l:content, a:need_beginline, a:need_endline, a:append)
 	if a:goto_buf
-		if s:only_has_one_repo()
+		if codenote#only_has_one_repo()
 			call codenote#OpenNoteRepo()
 		endif
 		call s:goto_note_buffer()
@@ -253,7 +253,7 @@ function codenote#YankCodeWithFunctionHeader(shortcut)
 	call s:yank_registers(l:file, l:header_line, l:header_content, 1, 1, 0)
 	call s:yank_registers(l:file, l:body_line, l:body_content, 1, 1, 1)
 	
-	if s:only_has_one_repo()
+	if codenote#only_has_one_repo()
 		call codenote#OpenNoteRepo()
 	endif
 	call s:goto_note_buffer()
@@ -265,7 +265,7 @@ function codenote#YankCodeLinkVisual(need_beginline, need_endline, append, goto_
 	let l:content = GetVisualSelection()
 	call s:yank_registers(l:file, l:line, l:content, a:need_beginline, a:need_endline, a:append)
 	if a:goto_buf
-		if s:only_has_one_repo()
+		if codenote#only_has_one_repo()
 			call codenote#OpenNoteRepo()
 		endif
 		call s:goto_note_buffer()
@@ -283,7 +283,7 @@ function codenote#YankCodeWithFunctionHeaderVisual(shortcut) range
 	call s:yank_registers(l:file, l:header_line, l:header_content, 1, 0, 0)
 	call s:yank_registers(l:file, l:body_line, l:body_content, 0, 1, 1)
 	
-	if s:only_has_one_repo()
+	if codenote#only_has_one_repo()
 		call codenote#OpenNoteRepo()
 	endif
 	call s:goto_note_buffer()

@@ -14,6 +14,24 @@ command -nargs=0 CodenoteSaveAllHEAD call codenote#py#Save(codenote#py#GetCodeRe
 command -nargs=0 CodenoteSaveCurrentFileHEAD call codenote#py#Save(codenote#py#GetCodeRepoCommit(), expand('%:p'))
 command -nargs=0 CodenoteShowDB call codenote#py#ShowDB()
 
+if exists(':Git') > 0
+	function s:GitLog(mods)
+		let output = codenote#py#GetAllCommits()
+		if v:shell_error
+			echoerr output
+			return
+		endif
+		if codenote#only_has_one_repo()
+			tabnew
+			exe 'tcd ' . g:coderepo_dir
+		else
+			tabnext 2
+		endif
+		exe a:mods . ' Git log --oneline --no-walk ' . output
+	endfunction
+	command -nargs=0 CodenoteShowCommits call s:GitLog(<q-mods>)
+endif
+
 " need_beginline, need_endline, append, goto_buf
 nnoremap <silent> <leader>ny :call codenote#YankCodeLink(1, 1, 0, 1)<CR>
 nnoremap <silent> <leader>nf :call codenote#YankCodeWithFunctionHeader('[f')<CR>
