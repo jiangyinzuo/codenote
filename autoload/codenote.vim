@@ -154,34 +154,49 @@ function s:GoToCodeLink()
 	exe "edit " . l:line_start . " " . g:coderepo_dir . "/" . l:file
 endfunction
 
-function s:GoToNoteLink()
+function s:GoToNoteLink(jump_to_note)
 	let l:file = expand("%:p")[len(g:coderepo_dir) + 1:]
 	let l:line = line(".")
 	let l:pattern = s:filepath(l:file, l:line)
 	" 将 / 转义为 \/
 	let l:pattern = substitute(l:pattern, "/", "\\\\/", "g")
-	if codenote#only_has_one_repo()
-		call codenote#OpenNoteRepo()
-	else
-		call s:goto_note_buffer()
+	if a:jump_to_note
+		if codenote#only_has_one_repo()
+			call codenote#OpenNoteRepo()
+		else
+			call s:goto_note_buffer()
+		endif
 	endif
-	silent! exe "vim /" . l:pattern . "/g " . g:noterepo_dir . "/**/*.md"
+
+	call setqflist([], 'f')
+	let l:flag = 'j'
+	if a:jump_to_note
+		let l:flag = ''
+	endif
+	silent! exe "vim /" . l:pattern . "/" . l:flag . " " . g:noterepo_dir . "/**/*.md"
 endfunction
 
-function codenote#GoToCodeNoteLink()
+function codenote#GoToCodeNoteLink(jump)
 	if !exists('g:coderepo_dir') || !exists('g:noterepo_dir')
 		echo 'codenote: set g:coderepo_dir and g:noterepo_dir at first!'
 		return
 	endif
 	let buf_repo_type = s:get_repo_type_of_current_buffer()
-	echom buf_repo_type
 	if buf_repo_type == "note"
 		call s:GoToCodeLink()
 	elseif buf_repo_type == "code"
-		call s:GoToNoteLink()
+		call s:GoToNoteLink(a:jump)
 	else
 		echoerr "current buffer doesn't belong to codenote repo"
 	endif
+endfunction
+
+function codenote#PreviewNoteSnippet()
+	call codenote#GoToCodeNoteLink(v:false)
+	let items = getqflist()
+	for item in items
+		call quickui#preview#open(bufname(item.bufnr), {"cursor": item.lnum, "syntax": "markdown"})
+	endfor
 endfunction
 
 function codenote#OpenCodeRepo()
