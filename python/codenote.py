@@ -273,11 +273,6 @@ class Snippet:
     def get_new_note_snippet_from_coderepo(
         self, new_commit: str
     ) -> Optional[tuple[list[str], int, int]]:
-        assert (
-            self.head_line.git_version is not None
-            and len(self.head_line.git_version) > 0
-        ), "Old commit not set."
-        assert self.head_line.snippet_id is not None, "Snippet id not set."
         if self.fenced_block_inner_content == self.code_content:
             assert self.head_line.line_num_end is not None
             return (
@@ -471,7 +466,7 @@ class RebaseToCurrentProcessor(ParseLineProcessor):
     regex = re.compile(pattern)
 
     def update_new_content(self, snippet: Snippet, new_content: list, i: int) -> int:
-        if snippet.head_line.snippet_id is None:
+        if snippet.head_line.snippet_id is None and snippet.head_line.git_version is not None:
             snippet.save_unstaged_to_storage(self.storage)
         maybe_result = snippet.get_new_note_snippet_from_coderepo(self.args.commit)
         if maybe_result is not None:
@@ -486,20 +481,19 @@ class RebaseToCurrentProcessor(ParseLineProcessor):
             i += len(note_snippet)
 
             # save new snippet to storage
-            assert snippet.head_line.snippet_id is not None, "Snippet id not set."
-            assert snippet.head_line.line_num_end is not None
-            self.storage.insert_snippet_with_snippet_id(
-                SnippetKey(
-                    snippet.head_line.snippet_id,
-                    self.args.submodule,
-                    self.args.commit,
-                ),
-                SnippetValue(
-                    new_head_line_num_start,
-                    new_head_line_num_end,
-                    "".join(snippet.fenced_block_outer_content),
-                ),
-            )
+            if snippet.head_line.snippet_id is not None and snippet.head_line.line_num_end is not None:
+                self.storage.insert_snippet_with_snippet_id(
+                    SnippetKey(
+                        snippet.head_line.snippet_id,
+                        self.args.submodule,
+                        self.args.commit,
+                    ),
+                    SnippetValue(
+                        new_head_line_num_start,
+                        new_head_line_num_end,
+                        "".join(snippet.fenced_block_outer_content),
+                    ),
+                )
         else:
             note_snippet = snippet.note_snippet
             new_content.extend(note_snippet)
@@ -509,10 +503,11 @@ class RebaseToCurrentProcessor(ParseLineProcessor):
 
 
 def check_consistency(args):
+    vim_quickfix_list = []
     commit: str = args.commit
     # glob all markdown files in noterepo
     for mdfile in pathlib.Path(args.noterepo).rglob("*.md"):
-        with open(mdfile, "r+") as f:
+        with open(mdfile, "r") as f:
             mdfile_content = f.readlines()
             i = 0
             while i < len(mdfile_content):
@@ -528,10 +523,9 @@ def check_consistency(args):
                     note_snippet = snippet.note_snippet
                     maybe_result = snippet.get_new_note_snippet_from_coderepo(commit)
                     if maybe_result is None or note_snippet != maybe_result[0]:
-                        print(
-                            f"Snippet {snippet.head_line.snippet_id} is inconsistent."
+                        vim_quickfix_list.append(
+                            f"{mdfile}:{i+1}: {str(snippet.head_line)}"
                         )
-                        exit(-1)
                     i += len(note_snippet)
                 else:
                     i += 1
