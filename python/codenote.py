@@ -115,7 +115,8 @@ class Snippet:
         @staticmethod
         def from_raw_str(s: str) -> Optional[Any]:
             result = Snippet.HeadLine.REGEX.match(s.strip())
-            assert result is not None
+            if result is None:
+                return None
             assert len(result.groups()) == 7
             if result.group(7) is not None and len(result.group(7).strip()) > 0:
                 return None
@@ -188,16 +189,13 @@ class Snippet:
 
     def __init__(
         self,
-        snippet_head_line: str,
+        snippet_head_line: HeadLine,
         coderepo: str,
         note_file_content: list[str],
         snippet_head_line_num: int,
     ):
         self.file_cache = FileCache()
-        if (head_line := Snippet.HeadLine.from_raw_str(snippet_head_line)) is None:
-            print(f"ERROR: Invalid head_line: {snippet_head_line}")
-            exit(1)
-        self.head_line: Snippet.HeadLine = head_line
+        self.head_line: Snippet.HeadLine = snippet_head_line
 
         # self.snippet_head_line = snippet_head_line
         # line_list = snippet_head_line.split()
@@ -391,11 +389,11 @@ class ParseLineProcessor(ABC):
         matched = False
         while i < len(mdfile_content):
             snippet_head_line = mdfile_content[i]
-            match = Snippet.HeadLine.REGEX.match(snippet_head_line)
-            if match:
+            head_line = Snippet.HeadLine.from_raw_str(snippet_head_line)
+            if head_line is not None:
                 matched = True
                 snippet = Snippet(
-                    snippet_head_line,
+                    head_line,
                     self.args.coderepo,
                     mdfile_content,
                     i + 1,
@@ -512,10 +510,10 @@ def check_consistency(args):
             i = 0
             while i < len(mdfile_content):
                 snippet_head_line = mdfile_content[i]
-                match = Snippet.HeadLine.REGEX.match(snippet_head_line)
-                if match:
+                head_line = Snippet.HeadLine.from_raw_str(snippet_head_line)
+                if head_line is not None:
                     snippet = Snippet(
-                        snippet_head_line,
+                        head_line,
                         args.coderepo,
                         mdfile_content,
                         i + 1,
@@ -582,8 +580,8 @@ class CheckoutProcessor(ParseLineProcessor):
             content: list[str] = f.readlines()
             snippet_head_line_num = self.args.linenum
             snippet_head_line_idx = snippet_head_line_num - 1
-            snippet_head_line: str = content[snippet_head_line_idx]
-            if Snippet.HeadLine.REGEX.match(snippet_head_line) is None:
+            snippet_head_line: Optional[Snippet.HeadLine] = Snippet.HeadLine.from_raw_str(content[snippet_head_line_idx])
+            if snippet_head_line is None:
                 print(f"Invalid snippet head line: {snippet_head_line}")
                 return
             snippet = Snippet(
