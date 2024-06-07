@@ -1,7 +1,6 @@
-let g:codenote_submodule = get(g:, 'codenote_submodule', '')
 command -nargs=0 OpenNoteRepo call codenote#OpenNoteRepo()
-command -nargs=0 OpenCodeRepo call codenote#OpenCodeRepo()
-command -nargs=0 RefreshCodeLinks call codenote#GetAllCodeLinks()
+command -nargs=0 OpenCodeRepo call codenote#coderepo#OpenCodeRepo()
+command -nargs=0 CodenoteRefreshLinks call codenote#GetAllCodeLinks()
 
 command -nargs=1 CodenoteCheck call codenote#py#Check(<q-args>)
 command -nargs=0 CodenoteCheckHEAD call codenote#py#Check(codenote#py#GetCodeRepoCommit())
@@ -34,10 +33,6 @@ endif
 
 " need_beginline, need_endline, append, goto_buf
 nnoremap <silent> <leader>ny :call codenote#YankCodeLink(1, 1, 0, 1)<CR>
-nnoremap <silent> <leader>nf :call codenote#YankCodeWithFunctionHeader('[f')<CR>
-
-
-vnoremap <silent> <leader>nf :call codenote#YankCodeWithFunctionHeaderVisual('[f')<CR>
 vnoremap <silent> <leader>ny :call codenote#YankCodeLinkVisual(1, 1, 0, 1)<CR>
 
 " 1) goto code/note link

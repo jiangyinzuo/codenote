@@ -51,8 +51,10 @@ class TestProcessors:
         assert len(list(tmp_dest.glob("*.md"))) == 4
         dir_compare(tmp_dest, "./unittest/duckdb-noterepo-v0.10.1-nocommit")
 
+        repo_name: str = ""
         args_0_10_1 = AttrDict(
             {
+                "repo_name": repo_name,
                 "submodule": "",
                 "commit": "v0.10.1",
                 "coderepo": "unittest/duckdb",
@@ -71,6 +73,7 @@ class TestProcessors:
 
         args_0_10_2 = AttrDict(
             {
+                "repo_name": repo_name,
                 "submodule": "",
                 "commit": "v0.10.2",
                 "coderepo": "unittest/duckdb",
@@ -91,14 +94,14 @@ class TestProcessors:
         dir_compare(tmp_dest, "./unittest/duckdb-noterepo-v0.10.1-after-saving/")
         assert storage.select_snippet_count() == 6
         print(storage.select_all_snippet_head_lines())
-        snippet_value = storage.checkout_snippet(SnippetKey(5, "", "v0.10.2"))
+        snippet_value = storage.checkout_snippet(SnippetKey(5, repo_name, "", "v0.10.2"))
         assert snippet_value is None
 
         codenote.RebaseToCurrentProcessor(args_0_10_2, storage).process_files()
         print(storage.select_all_snippet_head_lines())
         assert storage.select_snippet_count() == 9
         dir_compare(tmp_dest, "./unittest/duckdb-noterepo-v0.10.2")
-        snippet_value = storage.checkout_snippet(SnippetKey(5, "", "v0.10.2"))
+        snippet_value = storage.checkout_snippet(SnippetKey(5, repo_name, "", "v0.10.2"))
         assert snippet_value is not None
         assert snippet_value.line_num_start == 67
         assert snippet_value.line_num_end == 69
@@ -111,6 +114,7 @@ class TestProcessors:
         tmp_dest = tmp_path / ("duckdb-noterepo-v0.10.2-manual-update" + storage.name())
         args_0_10_1 = AttrDict(
             {
+                "repo_name": "",
                 "submodule": "",
                 "commit": "v0.10.1",
                 "coderepo": "unittest/duckdb",
@@ -122,7 +126,7 @@ class TestProcessors:
         print(storage.select_all_snippet_head_lines())
         assert storage.select_snippet_count() == 12
         if storage.name() == "MemoryStore":
-            text: str = storage.select_all()[SnippetKey(3, "", "v0.10.2")].text
+            text: str = storage.select_all()[SnippetKey(3, repo_name, "", "v0.10.2")].text
             assert text.splitlines() == [
                 "```cpp",
                 "unique_ptr<FileHandle> HTTPFileSystem::OpenFile(const string &path, FileOpenFlags flags,",
@@ -145,7 +149,7 @@ class TestProcessors:
                 "}",
                 "```",
             ]
-            text: str = storage.select_all()[SnippetKey(3, "", "v0.10.1")].text
+            text: str = storage.select_all()[SnippetKey(3, repo_name, "", "v0.10.1")].text
             assert text.splitlines() == [
                 "```cpp",
                 "unique_ptr<FileHandle> HTTPFileSystem::OpenFile(const string &path, uint8_t flags, FileLockType lock,",
@@ -164,6 +168,7 @@ class TestProcessors:
         dir_compare(tmp_dest, "./unittest/duckdb-noterepo-v0.10.1-after-saving/")
         args_0_10_2 = AttrDict(
             {
+                "repo_name": repo_name,
                 "submodule": "",
                 "commit": "v0.10.2",
                 "coderepo": "unittest/duckdb",
@@ -172,6 +177,7 @@ class TestProcessors:
         )
         args_checkout = AttrDict(
             {
+                "repo_name": repo_name,
                 "submodule": "",
                 "commit": "v0.10.1",
                 "coderepo": "unittest/duckdb",

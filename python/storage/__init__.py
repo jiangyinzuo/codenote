@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Any
 from dataclasses import dataclass
 
 
 @dataclass
 class SnippetKey:
     snippet_id: int
+    repo_name: str
     submodule: str
     git_version: str
 
@@ -13,12 +14,13 @@ class SnippetKey:
         return (
             isinstance(value, SnippetKey)
             and self.snippet_id == value.snippet_id
+            and self.repo_name == value.repo_name
             and self.submodule == value.submodule
             and self.git_version == value.git_version
         )
 
     def __hash__(self) -> int:
-        return hash(f"{self.snippet_id}+{self.submodule}+{self.git_version}")
+        return hash(f"{self.snippet_id}{self.repo_name}{self.submodule}{self.git_version}")
 
 
 @dataclass
@@ -33,6 +35,7 @@ class Storage(ABC):
     def insert_snippet(
         self,
         *,
+        repo_name: str,
         submodule: str,
         git_version: str,
         snippet_value: SnippetValue,
@@ -51,7 +54,7 @@ class Storage(ABC):
     def checkout_snippet(
         self,
         key: SnippetKey,
-    ) -> Optional[SnippetValue]:
+    ) -> SnippetValue | None:
         pass
 
     @abstractmethod

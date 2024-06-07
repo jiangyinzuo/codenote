@@ -1,10 +1,11 @@
-from typing import Optional, Any
+from typing import Any
 import pathlib
 import re
 from storage.duckdb import DuckDBStorage
 from storage import SnippetKey, Storage, SnippetValue
 from abc import ABC, abstractmethod
 import subprocess
+from enum import IntEnum
 
 
 def diff_strs(a: list[str], b: list[str]) -> str:
@@ -16,7 +17,7 @@ def diff_strs(a: list[str], b: list[str]) -> str:
 
 class FileCache:
     class CacheItem:
-        def __init__(self, content):
+        def __init__(self, content: list[str]):
             self.content: list[str] = content
 
     def __init__(self):
@@ -35,7 +36,7 @@ class FileCache:
         self.cache.clear()
 
 
-def find_all_sublist_indexes(sublist, mainlist) -> list[tuple[int, int]]:
+def find_all_sublist_indexes(sublist: list, mainlist: list) -> list[tuple[int, int]]:
     if not sublist:  # 空列表是任何列表的子列表
         return [(0, 0)]
     if len(sublist) > len(mainlist):
@@ -44,7 +45,7 @@ def find_all_sublist_indexes(sublist, mainlist) -> list[tuple[int, int]]:
     results = []
     main_index: int = 0
     sublist_index = 0
-    start_index: Optional[int] = None
+    start_index: int | None = None
 
     while main_index < len(mainlist):
         if sublist[sublist_index] == mainlist[main_index]:
@@ -83,61 +84,94 @@ class Snippet:
         Parse snippet head line.
 
         format:
-            <code_file>:<line_num_start>(-<line_num_end>)? (submodule=<path>)? (version=<commit>)? (snippet_id=<snippet_id>)?
+            (<repo_name>:)?<code_file>:<line_num_start>(-<line_num_end>)? (submodule=<path>)? (version=<commit>)? (snippet_id=<snippet_id>)?
 
         """
 
+        GroupEnum = IntEnum(
+            "GroupEnum",
+            [
+                "REPO_NAME",
+                "CODE_FILE",
+                "LINE_NUM_START",
+                "LINE_NUM_END",
+                "SUBMODULE",
+                "GIT_VERSION",
+                "SNIPPET_ID",
+            ],
+        )
+
         _STR_PATTERN = r"[\w\d\-./]+"
-        PATTERN = rf"^({_STR_PATTERN}):([0-9]+)(-[0-9]+)?(\s+submodule={_STR_PATTERN})?(\s+version={_STR_PATTERN})?(\s+snippet_id=[0-9]+)?(.+)?"
+        _REPONAME_PATTERN = rf"({_STR_PATTERN}:)?"
+        PATTERN = rf"^{_REPONAME_PATTERN}({_STR_PATTERN}):([0-9]+)(-[0-9]+)?(\s+submodule={_STR_PATTERN})?(\s+version={_STR_PATTERN})?(\s+snippet_id=[0-9]+)?(.+)?"
         REGEX = re.compile(PATTERN)
 
         def __init__(
             self,
+            repo_name: str,
             code_file: str,
             line_num_start: int,
             *,
-            line_num_end=None,
+            line_num_end: int | None = None,
             submodule: str = "",
-            git_version=None,
-            snippet_id=None,
+            git_version: str | None = None,
+            snippet_id: int | None = None,
         ):
+            if len(repo_name):
+                assert not repo_name.endswith(":"), f"Invalid repo_name: {repo_name}"
+            self.repo_name: str = repo_name
             self.code_file = code_file
             self.line_num_start = line_num_start
-            self.line_num_end: Optional[int] = line_num_end
+            self.line_num_end: int | None = line_num_end
             if self.line_num_end is not None:
                 assert self.line_num_start <= self.line_num_end
             self.submodule: str = submodule
-            self.git_version: Optional[str] = git_version
-            self.snippet_id: Optional[int] = snippet_id
+            self.git_version: str | None = git_version
+            self.snippet_id: int | None = snippet_id
             if self.git_version is None:
                 assert self.snippet_id is None
 
-        @staticmethod
-        def from_raw_str(s: str) -> Optional[Any]:
+        @classmethod
+        def from_raw_str(cls, s: str) -> Any | None:
             result = Snippet.HeadLine.REGEX.match(s.strip())
             if result is None:
                 return None
-            assert len(result.groups()) == 7
-            if result.group(7) is not None and len(result.group(7).strip()) > 0:
+            assert len(result.groups()) == len(cls.GroupEnum) + 1
+            if (
+                result.group(len(cls.GroupEnum) + 1) is not None
+                and len(result.group(len(cls.GroupEnum) + 1).strip()) > 0
+            ):
                 return None
-            code_file = result.group(1)
-            line_num_start = int(result.group(2))
+            repo_name: str | None = result.group(cls.GroupEnum.REPO_NAME)
+            if repo_name is None:
+                repo_name = ""
+            else:
+                repo_name = repo_name[:-1]
+            code_file = result.group(cls.GroupEnum.CODE_FILE)
+            line_num_start = int(result.group(cls.GroupEnum.LINE_NUM_START))
             # remove -
             line_num_end = (
-                int(result.group(3)[1:]) if result.group(3) is not None else None
+                int(result.group(cls.GroupEnum.LINE_NUM_END)[1:])
+                if result.group(cls.GroupEnum.LINE_NUM_END) is not None
+                else None
             )
 
-            def _parse_str_item(group: Optional[str], key: str, default):
+            def _parse_str_item(group: str | None, key: str, default):
                 return group.strip()[len(f"{key}=") :] if group is not None else default
 
-            submodule: str = _parse_str_item(result.group(4), "submodule", "")
-            git_version = _parse_str_item(result.group(5), "version", None)
+            submodule: str = _parse_str_item(
+                result.group(cls.GroupEnum.SUBMODULE), "submodule", ""
+            )
+            git_version: str | None = _parse_str_item(
+                result.group(cls.GroupEnum.GIT_VERSION), "version", None
+            )
             snippet_id = (
-                int(result.group(6).strip()[len("snippet_id=") :])
-                if result.group(6) is not None
+                int(result.group(cls.GroupEnum.SNIPPET_ID).strip()[len("snippet_id=") :])
+                if result.group(cls.GroupEnum.SNIPPET_ID) is not None
                 else None
             )
             return Snippet.HeadLine(
+                repo_name,
                 code_file,
                 line_num_start,
                 line_num_end=line_num_end,
@@ -149,6 +183,7 @@ class Snippet:
         def __eq__(self, value, /) -> bool:
             return (
                 isinstance(value, Snippet.HeadLine)
+                and self.repo_name == value.repo_name
                 and self.code_file == value.code_file
                 and self.line_num_start == value.line_num_start
                 and self.line_num_end == value.line_num_end
@@ -160,13 +195,17 @@ class Snippet:
         @staticmethod
         def to_str(
             code_file: str,
+            repo_name: str,
             line_num_start: int,
-            line_num_end: Optional[int],
+            line_num_end: int | None,
             submodule: str,
-            git_version: Optional[str],
-            snippet_id: Optional[int],
+            git_version: str | None,
+            snippet_id: int | None,
         ) -> str:
-            s = f"{code_file}:{line_num_start}"
+            s = repo_name
+            if len(s) > 0:
+                s += ":"
+            s += f"{code_file}:{line_num_start}"
             if line_num_end is not None:
                 s += f"-{line_num_end}"
             if len(submodule) > 0:
@@ -180,6 +219,7 @@ class Snippet:
         def __str__(self) -> str:
             return Snippet.HeadLine.to_str(
                 self.code_file,
+                self.repo_name,
                 self.line_num_start,
                 self.line_num_end,
                 self.submodule,
@@ -197,19 +237,6 @@ class Snippet:
         self.file_cache = FileCache()
         self.head_line: Snippet.HeadLine = snippet_head_line
 
-        # self.snippet_head_line = snippet_head_line
-        # line_list = snippet_head_line.split()
-        # assert 1 <= len(line_list) <= 3, "Invalid line format."
-        # filepath = line_list[0]
-        # if len(line_list) >= 2:
-        #     self.commit = line_list[1]
-        # else:
-        #     self.commit = ""
-        # if len(line_list) >= 3:
-        #     self.snippet_id: Optional[int] = int(line_list[2][len("snippet_id=") :])
-        # else:
-        #     self.snippet_id: Optional[int] = None
-        # self.code_file, code_line_num = filepath.split(":")
         self.coderepo = coderepo
 
         snippet_head_line_idx = snippet_head_line_num - 1
@@ -228,8 +255,6 @@ class Snippet:
         ]
         self.check_fenced_block_outer_content()
 
-        # self.code_line_num = int(code_line_num)
-        # code_line_start_idx = self.code_line_num - 1
         code_line_start_idx = self.head_line.line_num_start - 1
         # minus 2 ```
         code_line_end_idx = (
@@ -270,7 +295,7 @@ class Snippet:
 
     def get_new_note_snippet_from_coderepo(
         self, new_commit: str
-    ) -> Optional[tuple[list[str], int, int]]:
+    ) -> tuple[list[str], int, int] | None:
         if self.fenced_block_inner_content == self.code_content:
             assert self.head_line.line_num_end is not None
             return (
@@ -301,13 +326,14 @@ class Snippet:
     def _get_note_snippet(
         self,
         line_num_start: int,
-        line_num_end: Optional[int],
-        git_version: Optional[str],
-        snippet_id: Optional[int],
+        line_num_end: int | None,
+        git_version: str | None,
+        snippet_id: int | None,
     ) -> list[str]:
         return [
             Snippet.HeadLine.to_str(
                 self.head_line.code_file,
+                self.head_line.repo_name,
                 line_num_start,
                 line_num_end,
                 self.head_line.submodule,
@@ -344,6 +370,7 @@ class Snippet:
         ), f"Snippet id already set. {self.head_line.snippet_id}"
         assert self.head_line.line_num_end is not None, f"line_num_end is None."
         self.head_line.snippet_id = storage.insert_snippet(
+            repo_name=self.head_line.repo_name,
             submodule=self.head_line.submodule,
             git_version=self.head_line.git_version,
             snippet_value=SnippetValue(
@@ -365,6 +392,7 @@ class Snippet:
         storage.insert_snippet_with_snippet_id(
             SnippetKey(
                 self.head_line.snippet_id,
+                self.head_line.repo_name,
                 self.head_line.submodule,
                 self.head_line.git_version,
             ),
@@ -381,16 +409,16 @@ class ParseLineProcessor(ABC):
     def __init__(self, args, storage: Storage):
         self.args = args
         self.storage = storage
-        self._current_md_file: Optional[pathlib.Path] = None
+        self._current_md_file: pathlib.Path | None = None
 
-    def execute(self, mdfile_content) -> Optional[list[str]]:
+    def execute(self, mdfile_content: list[str]) -> list[str] | None:
         i = 0
-        new_content = []
+        new_content: list[str] = []
         matched = False
         while i < len(mdfile_content):
             snippet_head_line = mdfile_content[i]
             head_line = Snippet.HeadLine.from_raw_str(snippet_head_line)
-            if head_line is not None:
+            if head_line is not None and head_line.repo_name == self.args.repo_name:
                 matched = True
                 snippet = Snippet(
                     head_line,
@@ -418,13 +446,13 @@ class ParseLineProcessor(ABC):
             content = f.readlines()
             new_content = self.execute(content)
             if new_content is not None:
-                f.seek(0)
+                _ = f.seek(0)
                 f.writelines(new_content)
-                f.truncate()
+                _ = f.truncate()
         self._current_md_file = None
 
     @abstractmethod
-    def update_new_content(self, snippet: Snippet, new_content: list, i: int) -> int:
+    def update_new_content(self, snippet: Snippet, new_content: list[str], i: int) -> int:
         """
         i: current line index, start from 0
         """
@@ -440,7 +468,7 @@ class SaveToStorageProcessor(ParseLineProcessor):
         super().__init__(args, storage)
         self.vim_quickfix_list = []
 
-    def update_new_content(self, snippet: Snippet, new_content: list, i: int) -> int:
+    def update_new_content(self, snippet: Snippet, new_content: list[str], i: int) -> int:
         if snippet.code_content == snippet.fenced_block_inner_content:
             if len(snippet.head_line.submodule) == 0:
                 snippet.head_line.submodule = self.args.submodule
@@ -463,8 +491,11 @@ class RebaseToCurrentProcessor(ParseLineProcessor):
     pattern = r"^[\w\d\-./]+:[0-9]+"
     regex = re.compile(pattern)
 
-    def update_new_content(self, snippet: Snippet, new_content: list, i: int) -> int:
-        if snippet.head_line.snippet_id is None and snippet.head_line.git_version is not None:
+    def update_new_content(self, snippet: Snippet, new_content: list[str], i: int) -> int:
+        if (
+            snippet.head_line.snippet_id is None
+            and snippet.head_line.git_version is not None
+        ):
             snippet.save_unstaged_to_storage(self.storage)
         maybe_result = snippet.get_new_note_snippet_from_coderepo(self.args.commit)
         if maybe_result is not None:
@@ -479,10 +510,14 @@ class RebaseToCurrentProcessor(ParseLineProcessor):
             i += len(note_snippet)
 
             # save new snippet to storage
-            if snippet.head_line.snippet_id is not None and snippet.head_line.line_num_end is not None:
+            if (
+                snippet.head_line.snippet_id is not None
+                and snippet.head_line.line_num_end is not None
+            ):
                 self.storage.insert_snippet_with_snippet_id(
                     SnippetKey(
                         snippet.head_line.snippet_id,
+                        snippet.head_line.repo_name,
                         self.args.submodule,
                         self.args.commit,
                     ),
@@ -530,7 +565,7 @@ def check_consistency(args):
 
 
 class CheckoutProcessor(ParseLineProcessor):
-    def update_new_content(self, snippet: Snippet, new_content: list, i: int) -> int:
+    def update_new_content(self, snippet: Snippet, new_content: list[str], i: int) -> int:
         # old snippet that is edited manually may have not been saved to storage
         snippet.save_edited_manually_to_storage(self.storage)
         # bump the old note_snippet instead the new one
@@ -541,10 +576,11 @@ class CheckoutProcessor(ParseLineProcessor):
             checkout_commit = self.args.commit
             assert checkout_commit is not None, "New commit not set."
             # remain '\n' in the end of each line
-            maybe_fenced_block_outer_content: Optional[SnippetValue] = (
+            maybe_fenced_block_outer_content: SnippetValue | None = (
                 self.storage.checkout_snippet(
                     SnippetKey(
                         snippet.head_line.snippet_id,
+                        snippet.head_line.repo_name,
                         self.args.submodule,
                         checkout_commit,
                     )
@@ -578,9 +614,11 @@ class CheckoutProcessor(ParseLineProcessor):
     def checkout(self):
         with open(self.args.note_file, "r+") as f:
             content: list[str] = f.readlines()
-            snippet_head_line_num = self.args.linenum
-            snippet_head_line_idx = snippet_head_line_num - 1
-            snippet_head_line: Optional[Snippet.HeadLine] = Snippet.HeadLine.from_raw_str(content[snippet_head_line_idx])
+            snippet_head_line_num: int = self.args.linenum
+            snippet_head_line_idx: int = snippet_head_line_num - 1
+            snippet_head_line: Snippet.HeadLine | None = Snippet.HeadLine.from_raw_str(
+                content[snippet_head_line_idx]
+            )
             if snippet_head_line is None:
                 print(f"Invalid snippet head line: {snippet_head_line}")
                 return
@@ -643,6 +681,7 @@ def parse_args():
         description="Check differences between coderepo and noterepo."
     )
     parser.add_argument("--noterepo", required=True)
+    parser.add_argument("--reponame", default="", dest="repo_name")
     parser.add_argument("--submodule", default="")
 
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
@@ -718,7 +757,7 @@ def main():
             print(storage.select_all_snippet_head_lines())
         case "show-commits":
             for commits in storage.select_all_git_versions():
-                print(commits, end=' ')
+                print(commits, end=" ")
         case _:
             raise NotImplementedError()
 

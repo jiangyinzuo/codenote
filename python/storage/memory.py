@@ -1,4 +1,3 @@
-from typing import Optional
 from . import Storage, SnippetKey, SnippetValue
 
 
@@ -11,12 +10,13 @@ class MemoryStore(Storage):
     def insert_snippet(
         self,
         *,
+        repo_name: str,
         submodule: str,
         git_version: str,
         snippet_value: SnippetValue,
     ) -> int:
         snippet_id = self.next_snippet_id
-        key = SnippetKey(snippet_id, submodule, git_version)
+        key = SnippetKey(snippet_id, repo_name, submodule, git_version)
         self.snippets[key] = snippet_value
         self.next_snippet_id += 1
         return snippet_id
@@ -32,7 +32,7 @@ class MemoryStore(Storage):
     def checkout_snippet(
         self,
         key: SnippetKey,
-    ) -> Optional[SnippetValue]:
+    ) -> SnippetValue | None:
         return self.snippets.get(key)
 
     def select_all_snippet_head_lines(self):

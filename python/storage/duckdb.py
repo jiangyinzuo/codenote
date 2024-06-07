@@ -1,5 +1,4 @@
 import duckdb
-from typing import Optional
 from . import Storage, SnippetKey, SnippetValue
 
 
@@ -12,6 +11,7 @@ CREATE SEQUENCE IF NOT EXISTS snippet_serial;
 
 CREATE TABLE IF NOT EXISTS snippet(
     id INT NOT NULL DEFAULT nextval('snippet_serial'),
+    repo_name TEXT NOT NULL,
     submodule TEXT NOT NULL,
     git_version TEXT NOT NULL,
     line_num_start INT NOT NULL,
@@ -25,16 +25,18 @@ CREATE TABLE IF NOT EXISTS snippet(
     def insert_snippet(
         self,
         *,
+        repo_name: str,
         submodule: str,
         git_version: str,
         snippet_value: SnippetValue,
     ) -> int:
         result = self.con.execute(
             """
-INSERT INTO snippet(submodule, git_version, line_num_start, line_num_end, text)
-    VALUES (?, ?, ?, ?, ?) RETURNING id;
+INSERT INTO snippet(repo_name, submodule, git_version, line_num_start, line_num_end, text)
+    VALUES (?, ?, ?, ?, ?, ?) RETURNING id;
             """,
             [
+                repo_name,
                 submodule,
                 git_version,
                 snippet_value.line_num_start,
@@ -51,12 +53,13 @@ INSERT INTO snippet(submodule, git_version, line_num_start, line_num_end, text)
     ) -> None:
         self.con.execute(
             """
-INSERT INTO snippet(id, submodule, git_version, line_num_start, line_num_end, text)
-    VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO snippet(id, repo_name, submodule, git_version, line_num_start, line_num_end, text)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT DO NOTHING;
             """,
             [
                 key.snippet_id,
+                key.repo_name,
                 key.submodule,
                 key.git_version,
                 snippet_value.line_num_start,
@@ -68,13 +71,13 @@ INSERT INTO snippet(id, submodule, git_version, line_num_start, line_num_end, te
     def checkout_snippet(
         self,
         key: SnippetKey,
-    ) -> Optional[SnippetValue]:
+    ) -> SnippetValue | None:
         result = self.con.execute(
             """
 SELECT line_num_start, line_num_end, text
-FROM snippet WHERE id = ? AND submodule = ? AND git_version = ?;
+FROM snippet WHERE id = ? AND repo_name = ? AND submodule = ? AND git_version = ?;
             """,
-            [key.snippet_id, key.submodule, key.git_version],
+            [key.snippet_id, key.repo_name, key.submodule, key.git_version],
         ).fetchall()
         if len(result) == 0:
             return None
@@ -84,7 +87,7 @@ FROM snippet WHERE id = ? AND submodule = ? AND git_version = ?;
 
     def select_all_snippet_head_lines(self):
         result = self.con.sql(
-            "SELECT id, submodule, git_version, line_num_start, line_num_end FROM snippet"
+            "SELECT id, repo_name, submodule, git_version, line_num_start, line_num_end FROM snippet"
         ).fetchall()
         return result
 
