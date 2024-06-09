@@ -63,7 +63,7 @@ function codenote#check()
 		echom 'g:coderepo_dir or g:noterepo_dir does not exist!'
 		return
 	endif
-	if len(g:codenote_py_reponame) == 0
+	if !exists('g:codenote_py_reponame') || len(g:codenote_py_reponame) == 0
 		let g:codenote_py_reponame = input('coderepo name: ')
 	endif
 endfunction
