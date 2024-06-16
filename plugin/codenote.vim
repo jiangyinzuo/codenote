@@ -37,5 +37,5 @@ vnoremap <silent> <leader>ny :call codenote#YankCodeLinkVisual(1, 1, 0, 1)<CR>
 
 " 1) goto code/note link
 " 2) put the cursor to center of screen
-nnoremap <silent> <leader><C-]> <cmd>call codenote#GoToCodeNoteLink(v:true)<CR>z.
+nnoremap <silent> <leader><C-]> <cmd>call codenote#GoToCodeNoteLink(v:true)<CR>
 nnoremap <silent> <leader>p <cmd>call codenote#PreviewNoteSnippet()<CR>

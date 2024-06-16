@@ -61,17 +61,23 @@ endfunction
 function codenote#check()
 	if !exists('g:coderepo_dir') || !exists('g:noterepo_dir')
 		echom 'g:coderepo_dir or g:noterepo_dir does not exist!'
-		return
+		return v:false
 	endif
 	if !exists('g:codenote_py_reponame') || len(g:codenote_py_reponame) == 0
 		let g:codenote_py_reponame = input('coderepo name: ')
+		if len(g:codenote_py_reponame) == 0
+			return v:false
+		endif
 	endif
+	return v:true
 endfunction
 
 " 根据文件名的绝对路径，来判断当前buffer属于coderepo还是noterepo
 " return 'code', 'note', or ''
 function s:get_repo_type_of_current_buffer()
-	call codenote#check()
+	if !codenote#check()
+		return ''
+	endif
 	let bufpath = expand('%:p')
 	let [coderepo_path, repo_name] = codenote#coderepo#get_path_and_reponame_by_filename(bufpath)
 	let prefix_with_coderepo = codenote#coderepo#CommonPrefixLength(bufpath, coderepo_path)
@@ -122,9 +128,6 @@ function s:GoToCodeLink()
 	let l:repo_name = l:dest[0]
 	echo l:repo_name l:line l:file
 
-	if codenote#only_has_one_repo()
-		call codenote#coderepo#OpenCodeRepo()
-	endif
 	call codenote#coderepo#goto_code_buffer(l:repo_name)
 	let l:line_start = split(l:line, '-')[0]
 	exe "edit " . l:line_start . " " . codenote#coderepo#get_path_by_repo_name(l:repo_name) . "/" . l:file
@@ -154,8 +157,7 @@ function s:GoToNoteLink(jump_to_note)
 endfunction
 
 function codenote#GoToCodeNoteLink(jump)
-	if !exists('g:coderepo_dir') || !exists('g:noterepo_dir')
-		echo 'codenote: set g:coderepo_dir and g:noterepo_dir at first!'
+	if !codenote#check()
 		return
 	endif
 	let buf_repo_type = s:get_repo_type_of_current_buffer()

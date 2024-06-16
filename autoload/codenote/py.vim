@@ -15,7 +15,9 @@ endfunction
 let s:str_pat = '[A-Za-z0-9\-./]+'
 let s:regex = '\v'.s:str_pat.'(:[0-9]+)(-[0-9]+)?(\s+version\='.s:str_pat.')?(\s+snippet_id\=[0-9]+)?\s*$'
 function codenote#py#Checkout(commit)
-	call codenote#check()
+	if codenote#check()
+		return
+	endif
 	let l:linenum = line('.')
 	while l:linenum > 0
 		if getline(l:linenum) !~# s:regex
@@ -33,7 +35,9 @@ function codenote#py#Checkout(commit)
 endfunction
 
 function s:execute_with_code_note_commit(subcommand, commit)
-	call codenote#check()
+	if codenote#check()
+		return
+	endif
 	let l:cmd = s:common_cmd() . ' '.a:subcommand.' --commit=' . a:commit . ' --coderepo=' . codenote#coderepo#get_path_by_repo_name(g:codenote_py_reponame)
 	exe ':!' . l:cmd
 endfunction
@@ -43,7 +47,9 @@ function codenote#py#CheckoutAll(commit)
 endfunction
 
 function codenote#py#Save(commit, file)
-	call codenote#check()
+	if codenote#check()
+		return
+	endif
 	let l:cmd = s:common_cmd() . ' save --commit=' . a:commit . ' --coderepo=' . codenote#coderepo#get_path_by_repo_name(g:codenote_py_reponame)
 	if len(a:file) > 0
 		let l:cmd .= ' --note-file=' . a:file
@@ -65,13 +71,17 @@ function codenote#py#RebaseToCurrent(commit)
 endfunction
 
 function codenote#py#ShowDB()
-	call codenote#check()
+	if codenote#check()
+		return
+	endif
 	let l:cmd = s:common_cmd() . ' show-db'
 	exe ':!' . l:cmd
 endfunction
 
 function codenote#py#GetCodeRepoCommit()
-	call codenote#check()
+	if codenote#check()
+		return
+	endif
 	let coderepo_path = codenote#coderepo#get_path_by_repo_name(g:codenote_py_reponame)
 	if len(coderepo_path) == 0
 		echoerr 'coderepo not found'
@@ -81,7 +91,9 @@ function codenote#py#GetCodeRepoCommit()
 endfunction
 
 function codenote#py#GetAllCommits()
-	call codenote#check()
+	if codenote#check()
+		return
+	endif
 	let l:cmd = s:common_cmd() . ' show-commits'
 	return system(l:cmd)
 endfunction
