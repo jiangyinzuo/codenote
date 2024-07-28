@@ -1,3 +1,4 @@
+" vim: set noet:
 let g:codenote_py_reponame = get(g:, 'codenote_py_reponame', '')
 
 let s:codenote_py= 'python3 ' . expand('<sfile>:p:h:h:h') . '/python/codenote.py --noterepo='

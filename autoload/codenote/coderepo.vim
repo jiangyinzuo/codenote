@@ -1,3 +1,4 @@
+" vim: set noet:
 let s:repo_name_dict = {}
 let g:codenote_next_tabid = get(g:, "codenote_next_tabid", 2)
 " repo_name, tabid
@@ -22,12 +23,14 @@ function codenote#coderepo#CommonPrefixLength(s1, s2)
 	let n2 = len(a:s2)
 	let min_len = min([n1, n2])
 	let i = 0
-
+	let slash_cnt = 0
 	while i < min_len && a:s1[i] ==# a:s2[i]
+		if a:s1[i] == '/'
+			let slash_cnt += 1
+		endif
 		let i += 1
 	endwhile
-
-	return i
+	return i - slash_cnt
 endfunction
 
 function codenote#coderepo#get_path_and_reponame_by_filename(filename)
@@ -36,7 +39,7 @@ function codenote#coderepo#get_path_and_reponame_by_filename(filename)
 	let l:best_repo_name = ""
 	for [path, repo_name] in items(s:repo_name_dict)
 		let common_prefix_length = codenote#coderepo#CommonPrefixLength(a:filename, path)
-		if common_prefix_length > l:max_common_prefix_length
+		if common_prefix_length > l:max_common_prefix_length || common_prefix_length == l:max_common_prefix_length && path < l:best_path
 			let l:max_common_prefix_length = common_prefix_length
 			let l:best_path = path
 			let l:best_repo_name = repo_name
@@ -78,4 +81,3 @@ function codenote#coderepo#OpenCodeRepo()
 	endfor
 	call codenote#GetAllCodeLinks()
 endfunction
-
