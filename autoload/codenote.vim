@@ -228,7 +228,7 @@ endfunction
 " See also: root/vimrc.d/asynctasks.vim
 function codenote#YankCodeLink(need_beginline, need_endline, append, goto_buf)
 	let [l:path, l:repo_name] = codenote#coderepo#get_path_and_reponame_by_filename(expand("%:p"))
-	let l:file = expand("%:p")[len(l:path) + 1:]
+	let l:file = expand("%:p")[len(l:path):]
 	let l:content = getline(".")
 	call s:yank_code_link(l:repo_name, l:file, line("."), l:content, a:need_beginline, a:need_endline, a:append, a:goto_buf)
 endfunction
