@@ -1,35 +1,6 @@
 command -nargs=0 OpenNoteRepo call codenote#OpenNoteRepo()
 command -nargs=0 OpenCodeRepo call codenote#coderepo#OpenCodeRepo()
-command -nargs=0 CodenoteRefreshLinks call codenote#GetAllCodeLinks()
-
-command -nargs=1 CodenoteCheck call codenote#py#Check(<q-args>)
-command -nargs=0 CodenoteCheckHEAD call codenote#py#Check(codenote#py#GetCodeRepoCommit())
-command -nargs=1 CodenoteCheckout call codenote#py#Checkout(<q-args>)
-command -nargs=0 CodenoteCheckoutHEAD call codenote#py#Checkout(codenote#py#GetCodeRepoCommit())
-command -nargs=1 CodenoteCheckoutAll call codenote#py#CheckoutAll(<q-args>)
-command -nargs=0 CodenoteCheckoutAllHEAD call codenote#py#CheckoutAll(codenote#py#GetCodeRepoCommit())
-command -nargs=0 CodenoteRebaseToHEAD call codenote#py#RebaseToCurrent(codenote#py#GetCodeRepoCommit())
-command -nargs=0 CodenoteSaveAllHEAD call codenote#py#Save(codenote#py#GetCodeRepoCommit(), '')
-command -nargs=0 CodenoteSaveCurrentFileHEAD call codenote#py#Save(codenote#py#GetCodeRepoCommit(), expand('%:p'))
-command -nargs=0 CodenoteShowDB call codenote#py#ShowDB()
-
-if exists(':Git') > 0
-	function s:GitLog(mods)
-		let output = codenote#py#GetAllCommits()
-		if v:shell_error
-			echoerr output
-			return
-		endif
-		if codenote#only_has_one_repo()
-			tabnew
-			exe 'tcd ' . g:coderepo_dir
-		else
-			tabnext 2
-		endif
-		exe a:mods . ' Git log --oneline --no-walk ' . output
-	endfunction
-	command -nargs=0 CodenoteShowCommits call s:GitLog(<q-mods>)
-endif
+command -nargs=0 CodenoteRefreshLinks call codenote#codelinks#Init()
 
 " need_beginline, need_endline, append, goto_buf
 nnoremap <silent> <leader>ny :call codenote#YankCodeLink(1, 1, 0, 1)<CR>

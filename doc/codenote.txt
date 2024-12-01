@@ -5,7 +5,7 @@ manually set *g:coderepo_dir* and *g:noterepo_dir*
 
 >vim
 	" ends with /
-	let g:coderepo_dir = {"duckdb/duckdb": "/path/to/duckdb/"}
+	let g:coderepo_dir = [["duckdb/duckdb", "/path/to/duckdb/"]]
 	let g:noterepo_dir = "path/to/note/"
 <
 

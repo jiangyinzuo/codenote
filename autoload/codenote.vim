@@ -1,74 +1,17 @@
 " vim: set noet:
-let s:fd = 'fd'
-let g:codenote_submodule = get(g:, 'codenote_submodule', '')
-
-sign define code_note_link text=📓 texthl=Search
+const s:fd = 'fd'
 
 " sed -i 's/^+\(.*\) \(.*\)$/\2:\1/' *.md
-function codenote#ConvertFormat(line)
+function s:ConvertFormat(line)
 	" 使用 substitute() 函数来交换 +linenumber 和 path/to/filename
 	let converted = substitute(a:line, '+\(\d\+\) \(.*\)', '\2:\1', '')
 	return converted
-endfunction
-
-function codenote#SignCodeLinks()
-	if !exists('g:code_link_dict') || !exists('g:coderepo_dir') || !exists('g:noterepo_dir')
-		return
-	endif
-	if g:code_link_dict == {}
-		return
-	endif
-	let l:current_file = expand("%:p")
-	let [coderepo_path, repo_name] = codenote#coderepo#get_path_and_reponame_by_filename(l:current_file)
-	if len(coderepo_path) > 0
-		let l:current_file = l:current_file[len(coderepo_path) + 1:]
-		let l:key = repo_name . ":" . l:current_file
-		if has_key(g:code_link_dict, l:key)
-			sign unplace * group=code_note_link
-			for l:line in g:code_link_dict[l:key]
-				execute "sign place " . l:line . " line=" . l:line . " group=code_note_link priority=2000 name=code_note_link file=" . l:current_file
-			endfor
-		endif
-	endif
-endfunction
-
-function codenote#GetCodeLinkDict()
-	if !exists("g:noterepo_dir")
-		echoerr "g:noterepo_dir is not set"
-		return
-	endif
-
-	" 高亮标记支持
-	" repo_name:/path/to/filename.ext:line_number
-	" --max-columns=0 防止rg显示 [ ... xxx more matches ]
-	let g:code_links = system("rg -INo --max-columns=0 '^[\\w\\d\\-\\+./]+:[\\w\\d\\-\\+./]+:[0-9]+' " . g:noterepo_dir)
-	let g:code_links = split(g:code_links, "\n")
-
-	let g:code_link_dict = {}
-	for code_link in g:code_links
-		let l:dest = split(code_link, ":")
-		let l:line = l:dest[2]
-		let l:file = l:dest[1]
-		let l:repo_name = l:dest[0]
-		let l:key = l:repo_name . ":" . l:file
-		if has_key(g:code_link_dict, l:key)
-			call add(g:code_link_dict[l:key], l:line)
-		else
-			let g:code_link_dict[l:key] = [l:line]
-		endif
-	endfor
 endfunction
 
 function codenote#check()
 	if !exists('g:coderepo_dir') || !exists('g:noterepo_dir')
 		echom 'g:coderepo_dir or g:noterepo_dir does not exist!'
 		return v:false
-	endif
-	if !exists('g:codenote_py_reponame') || len(g:codenote_py_reponame) == 0
-		let g:codenote_py_reponame = input('coderepo name: ')
-		if len(g:codenote_py_reponame) == 0
-			return v:false
-		endif
 	endif
 	return v:true
 endfunction
@@ -102,16 +45,16 @@ function s:goto_note_buffer()
 endfunction
 
 function codenote#OpenNoteRepo()
-	execute "tabnew " . g:noterepo_dir
-	tabmove 0
+	execute "0tabnew " . g:noterepo_dir
 	execute "tcd " . g:noterepo_dir
 	call codenote#GetAllCodeLinks()
 endfunction
 
 function s:GoToCodeLink()
 	let l:cur = line('.')
-	let l:cur_line = getline(l:cur)
 
+	" find code link
+	let l:cur_line = getline(l:cur)
 	while l:cur >= 0 && l:cur_line !~# s:codelink_regex
 		let l:cur -= 1
 		let l:cur_line = getline(l:cur)
@@ -127,9 +70,11 @@ function s:GoToCodeLink()
 	let l:line = '+' . split(l:dest[2])[0]
 	let l:file = l:dest[1]
 	let l:repo_name = l:dest[0]
-	echo l:repo_name l:line l:file
+	echom l:repo_name l:line l:file
 
+	" switch tab
 	call codenote#coderepo#goto_code_buffer(l:repo_name)
+
 	let l:line_start = split(l:line, '-')[0]
 	exe "edit " . l:line_start . " " . codenote#coderepo#get_path_by_repo_name(l:repo_name) . "/" . l:file
 endfunction
@@ -253,16 +198,4 @@ function codenote#YankCodeLinkVisual(need_beginline, need_endline, append, goto_
 	let [l:line, l:column_start] = getpos("'<")[1:2]
 	let l:content = s:GetVisualSelection()
 	call s:yank_code_link(l:repo_name, l:file, l:line, l:content, a:need_beginline, a:need_endline, a:append, a:goto_buf)
-endfunction
-
-function codenote#GetAllCodeLinks()
-	if exists('g:coderepo_dir') && exists('g:noterepo_dir') && g:noterepo_dir != ""
-		call codenote#GetCodeLinkDict()
-		call codenote#SignCodeLinks()
-		augroup codenote
-			autocmd!
-			autocmd BufWinEnter * call codenote#SignCodeLinks()
-			autocmd BufWritePost *.md call codenote#GetCodeLinkDict()
-		augroup END
-	endif
 endfunction
