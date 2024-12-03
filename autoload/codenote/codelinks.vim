@@ -9,7 +9,7 @@ function codenote#codelinks#Sign()
 	if len(coderepo_path) > 0
 		let l:current_file = l:current_file[len(coderepo_path):]
 		let l:key = repo_name . ":" . l:current_file
-		echom "current buffer is in coderepo: " . l:key
+		" echom "current buffer is in coderepo: " . l:key
 		if has_key(s:code_link_dict, l:key)
 			sign unplace * group=code_note_link
 			for l:line in s:code_link_dict[l:key]
