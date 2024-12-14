@@ -47,7 +47,7 @@ endfunction
 function codenote#OpenNoteRepo()
 	execute "0tabnew " . g:noterepo_dir
 	execute "tcd " . g:noterepo_dir
-	call codenote#GetAllCodeLinks()
+	call codenote#codelinks#Init()
 endfunction
 
 function s:GoToCodeLink()
@@ -81,7 +81,7 @@ endfunction
 
 function s:GoToNoteLink(jump_to_note)
 	let [path, repo_name] = codenote#coderepo#get_path_and_reponame_by_filename(expand("%:p"))
-	let l:file = expand("%:p")[len(path) + 1:]
+	let l:file = expand("%:p")[len(path):]
 	let l:line = line(".")
 	let l:pattern = s:filepath(repo_name, l:file, l:line)
 	" 将 / 转义为 \/
@@ -99,7 +99,7 @@ function s:GoToNoteLink(jump_to_note)
 	if a:jump_to_note
 		let l:flag = ''
 	endif
-	silent! exe "vim /" . l:pattern . "/" . l:flag . " " . codenote#coderepo#get_path_by_repo_name(repo_name) . "/**/*.md"
+	silent! exe "vim #" . l:pattern . "#" . l:flag . " " . g:noterepo_dir . "**/*.md"
 endfunction
 
 function codenote#GoToCodeNoteLink(jump)
@@ -117,11 +117,17 @@ function codenote#GoToCodeNoteLink(jump)
 endfunction
 
 function codenote#PreviewNoteSnippet()
-	call codenote#GoToCodeNoteLink(v:false)
+	if !codenote#check()
+		return
+	endif
+	call s:GoToNoteLink(v:false)
 	let items = getqflist()
-	for item in items
-		call quickui#preview#open(bufname(item.bufnr), {"cursor": item.lnum, "syntax": "markdown"})
-	endfor
+	if len(items) == 0
+		return
+	endif
+	call quickui#preview#open(bufname(items[0].bufnr), {"cursor": items[0].lnum - 7, "syntax": "markdown", "h": &lines * 2 / 5, "w": &columns * 3 / 4})
+	" TODO: use preview-window
+	" exe 'pedit +' . items[0].lnum
 endfunction
 
 function codenote#only_has_one_repo()

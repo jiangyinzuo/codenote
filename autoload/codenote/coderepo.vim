@@ -70,5 +70,5 @@ function codenote#coderepo#OpenCodeRepo()
 		" open directory
 		execute 'edit ' . coderepo
 	endfor
-	call codenote#GetAllCodeLinks()
+	call codenote#codelinks#Init()
 endfunction
