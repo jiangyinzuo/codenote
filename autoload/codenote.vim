@@ -146,6 +146,16 @@ function! s:filepath(repo_name, file, line_start)
 	return a:repo_name . ":" . a:file . ":" . a:line_start
 endfunction
 
+function s:yank_pathline_register(repo_name, file, line_start, line_end, append)
+	let l:pathline = s:filepath(a:repo_name, a:file, a:line_start) . '-' . a:line_end
+	if a:append
+		let @" .= l:pathline . "\n"
+		echo "append to @"
+	else
+		let @" = l:pathline . "\n"
+	endif
+endfunction
+
 function s:yank_registers(repo_name, file, line_start, content, need_beginline, need_endline, append)
 	if a:need_beginline && &filetype != 'markdown'
 		let l:beginline = "```" . &filetype . "\n"
@@ -167,6 +177,16 @@ function s:yank_registers(repo_name, file, line_start, content, need_beginline, 
 	endif
 endfunction
 
+function s:yank_pathline(repo_name, file, line_start, line_end, append, goto_buf)
+	call s:yank_pathline_register(a:repo_name, a:file, a:line_start, a:line_end, a:append)
+	if a:goto_buf
+		if codenote#only_has_one_repo()
+			call codenote#OpenNoteRepo()
+		endif
+		call s:goto_note_buffer()
+	endif
+endfunction
+
 function s:yank_code_link(repo_name, file, line, content, need_beginline, need_endline, append, goto_buf)
 	call s:yank_registers(a:repo_name, a:file, a:line, a:content, a:need_beginline, a:need_endline, a:append)
 	if a:goto_buf
@@ -182,6 +202,13 @@ function codenote#YankCodeLink(need_beginline, need_endline, append, goto_buf)
 	let l:file = expand("%:p")[len(l:path):]
 	let l:content = getline(".")
 	call s:yank_code_link(l:repo_name, l:file, line("."), l:content, a:need_beginline, a:need_endline, a:append, a:goto_buf)
+endfunction
+
+function codenote#YankPathLine(append, goto_buf)
+	let [l:path, l:repo_name] = codenote#coderepo#get_path_and_reponame_by_filename(expand("%:p"))
+	let l:file = expand("%:p")[len(l:path):]
+	let l:line = line(".")
+	call s:yank_pathline(l:repo_name, l:file, l:line, l:line, a:append, a:goto_buf)
 endfunction
 
 function s:GetVisualSelection()
