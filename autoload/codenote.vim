@@ -45,11 +45,11 @@ endfunction
 
 function s:save_source_context()
 	return {
-		'winid': win_getid(),
-		'tabnr': tabpagenr(),
-		'winnr': winnr(),
-		'view': winsaveview(),
-	}
+				\ 'winid': win_getid(),
+				\ 'tabnr': tabpagenr(),
+				\ 'winnr': winnr(),
+				\ 'view': winsaveview(),
+				\ }
 endfunction
 
 function s:restore_source_context(ctx)
