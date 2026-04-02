@@ -69,7 +69,7 @@ function s:GoToCodeLink()
 	call codenote#coderepo#goto_code_buffer(l:repo_name)
 
 	let l:line_start = split(l:line, '-')[0]
-	execute 'edit +' . l:line_start . ' ' . fnameescape(codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file)
+	execute 'edit ' . l:line_start . ' ' . fnameescape(codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file)
 endfunction
 
 function s:GoToNoteLink(jump_to_note)
