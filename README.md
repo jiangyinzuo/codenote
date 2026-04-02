@@ -10,7 +10,13 @@ Set these variables in your Vim config:
 " paths should be absolute, and code repo paths should end with /
 let g:coderepo_dir = [["duckdb/duckdb", "/path/to/duckdb/"]]
 let g:noterepo_dir = "/path/to/note/"
+let g:codenote_layout_mode = "tab"  " or: "window"
 ```
+
+Layout modes:
+
+- `tab` (default): note repo in tab 1, code repos in tabs 2..n
+- `window`: note repo in the left window, code repo in the right window, using `:lcd` on each switch and `:vsp` only when there is a single window
 
 ## Requirements
 
@@ -19,8 +25,8 @@ let g:noterepo_dir = "/path/to/note/"
 
 ## Commands
 
-- `:OpenNoteRepo`: open the note repo and initialize code link signs
-- `:OpenCodeRepo`: open configured code repos in tabs and initialize code link signs
+- `:OpenNoteRepo`: open the note repo in the current layout and initialize code link signs
+- `:OpenCodeRepo`: open code repos in the current layout and initialize code link signs
 - `:CodenoteRefreshLinks`: rescan notes and refresh code link signs
 
 ## Keymaps

@@ -39,15 +39,8 @@ function s:get_repo_type_of_current_buffer()
 	endif
 endfunction
 
-" 约定第1个tab作为note repo window，第2-n个tab作为code repo window
-function s:goto_note_buffer()
-	tabfirst
-endfunction
-
 function codenote#OpenNoteRepo()
-	execute "0tabnew " . g:noterepo_dir
-	execute "tcd " . g:noterepo_dir
-	call codenote#codelinks#Init()
+	call codenote#coderepo#OpenNoteRepo()
 endfunction
 
 function s:GoToCodeLink()
@@ -76,7 +69,7 @@ function s:GoToCodeLink()
 	call codenote#coderepo#goto_code_buffer(l:repo_name)
 
 	let l:line_start = split(l:line, '-')[0]
-	exe "edit " . l:line_start . " " . codenote#coderepo#get_path_by_repo_name(l:repo_name) . "/" . l:file
+	execute 'edit +' . l:line_start . ' ' . fnameescape(codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file)
 endfunction
 
 function s:GoToNoteLink(jump_to_note)
@@ -87,10 +80,10 @@ function s:GoToNoteLink(jump_to_note)
 	" 将 / 转义为 \/
 	let l:pattern = substitute(l:pattern, "/", "\\\\/", "g")
 	if a:jump_to_note
-		if codenote#only_has_one_repo()
+		if !codenote#coderepo#has_note_target()
 			call codenote#OpenNoteRepo()
 		else
-			call s:goto_note_buffer()
+			call codenote#coderepo#goto_note_buffer()
 		endif
 	endif
 
@@ -180,20 +173,20 @@ endfunction
 function s:yank_pathline(repo_name, file, line_start, line_end, append, goto_buf)
 	call s:yank_pathline_register(a:repo_name, a:file, a:line_start, a:line_end, a:append)
 	if a:goto_buf
-		if codenote#only_has_one_repo()
+		if !codenote#coderepo#has_note_target()
 			call codenote#OpenNoteRepo()
 		endif
-		call s:goto_note_buffer()
+		call codenote#coderepo#goto_note_buffer()
 	endif
 endfunction
 
 function s:yank_code_link(repo_name, file, line, content, need_beginline, need_endline, append, goto_buf)
 	call s:yank_registers(a:repo_name, a:file, a:line, a:content, a:need_beginline, a:need_endline, a:append)
 	if a:goto_buf
-		if codenote#only_has_one_repo()
+		if !codenote#coderepo#has_note_target()
 			call codenote#OpenNoteRepo()
 		endif
-		call s:goto_note_buffer()
+		call codenote#coderepo#goto_note_buffer()
 	endif
 endfunction
 " See also: root/vimrc.d/asynctasks.vim

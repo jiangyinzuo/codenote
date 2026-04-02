@@ -1,36 +1,62 @@
 vim:ft=help
 *codenote.txt*
 
-manually set *g:coderepo_dir* and *g:noterepo_dir*
+codenote links source code locations to Markdown notes.
+
+CONFIGURATION~
+						*codenote-configuration*
+
+Set these variables in your Vim config:
 
 >vim
 	" ends with /
 	let g:coderepo_dir = [["duckdb/duckdb", "/path/to/duckdb/"]]
 	let g:noterepo_dir = "/path/to/note/"
+	let g:codenote_layout_mode = "tab"  " or: "window"
 <
+
+						*g:coderepo_dir*
+List of [repo_name, path] pairs.
+Code repo paths must be absolute and should end with /.
+
+						*g:noterepo_dir*
+Absolute path to the note repo directory.
+
+					*g:codenote_layout_mode*
+Controls how codenote switches between note and code.
+
+Values: >
+	"tab"		default. note repo is in tab 1, code repos are in tabs 2..n.
+	"window"	note repo is in the left window, code repo is in the
+			right window in the current tab.
+<
+In "window" mode, codenote updates the local working directory with
+|:lcd| after switching. If there is only one window, it uses |:vsp|.
+Otherwise it reuses the existing note/code window.
 
 Commands~
 
 	:OpenNoteRepo
-		Open the note repo and initialize link signs.
+		Open the note repo in the current layout and initialize link signs.
 
 	:OpenCodeRepo
-		Open configured code repos in tabs and initialize link signs.
+		Open code repos in the current layout and initialize link signs.
 
 	:CodenoteRefreshLinks
 		Rescan Markdown notes and refresh link signs.
 
 Keymaps~
+						*codenote-keymaps*
 
 	<leader>ny
 		Yank the current line, or the current visual selection, as:
 			pathline
 			code block
-		Then jump to the note tab.
+		Then jump to the note side.
 
 	<leader>nl
 		Yank only the current cursor line as a pathline.
-		Then jump to the note tab.
+		Then jump to the note side.
 
 	<leader><C-]>
 		Jump between code and note.
@@ -39,5 +65,6 @@ Keymaps~
 		Preview the matching note snippet for the current code location.
 
 Pathline format~
+					*codenote-pathline-format*
 
 	repo_name:path/to/file:start-end

@@ -1,4 +1,4 @@
-command -nargs=0 OpenNoteRepo call codenote#OpenNoteRepo()
+command -nargs=0 OpenNoteRepo call codenote#coderepo#OpenNoteRepo()
 command -nargs=0 OpenCodeRepo call codenote#coderepo#OpenCodeRepo()
 command -nargs=0 CodenoteRefreshLinks call codenote#codelinks#Init()
 
