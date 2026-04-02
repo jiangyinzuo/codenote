@@ -80,7 +80,7 @@ function s:GoToCodeLink(jump_to_location)
 	let l:line_start = split(l:line, '-')[0]
 	let l:target = codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file
 	if a:jump_to_location
-		execute 'edit +' . l:line_start . ' ' . fnameescape(l:target)
+		execute 'edit ' . l:line_start . ' ' . fnameescape(l:target)
 	else
 		call s:edit_without_moving_to_match(l:target)
 	endif
