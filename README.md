@@ -34,7 +34,7 @@ Layout modes:
 - `<leader>ny`: yank current line or visual selection as `pathline + code block`, then jump to the note tab
 - `<leader>nl`: yank only the current cursor line as `pathline`, then jump to the note tab
 - `<leader><C-]>`: jump between code and note
-- `<leader>]`: switch to the matching code or note buffer without jumping to the matched location
+- `<leader>]`: update the matching code or note buffer to the matched location, while keeping the current cursor and focus in the original buffer
 - `<leader>np`: preview the matched note snippet for the current code location
 
 `pathline` format:

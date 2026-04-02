@@ -62,8 +62,8 @@ Keymaps~
 		Jump between code and note.
 
 	<leader>]
-		Switch to the matching code or note buffer without jumping to the
-		matched location.
+		Update the matching code or note buffer to the matched location,
+		but keep the current cursor and focus in the original buffer.
 
 	<leader>np
 		Preview the matching note snippet for the current code location.

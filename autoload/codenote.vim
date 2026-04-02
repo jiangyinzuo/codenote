@@ -43,13 +43,23 @@ function codenote#OpenNoteRepo()
 	call codenote#coderepo#OpenNoteRepo()
 endfunction
 
-function s:edit_without_moving_to_match(target)
-	let l:current_buf = expand('%:p')
-	let l:view = winsaveview()
-	execute 'edit ' . fnameescape(a:target)
-	if fnamemodify(a:target, ':p') ==# l:current_buf
-		call winrestview(l:view)
+function s:save_source_context()
+	return {
+		'winid': win_getid(),
+		'tabnr': tabpagenr(),
+		'winnr': winnr(),
+		'view': winsaveview(),
+	}
+endfunction
+
+function s:restore_source_context(ctx)
+	if win_gotoid(a:ctx.winid)
+		call winrestview(a:ctx.view)
+		return
 	endif
+	execute 'tabnext ' . a:ctx.tabnr
+	execute a:ctx.winnr . 'wincmd w'
+	call winrestview(a:ctx.view)
 endfunction
 
 function s:GoToCodeLink(jump_to_location)
@@ -74,15 +84,19 @@ function s:GoToCodeLink(jump_to_location)
 	let l:repo_name = l:dest[0]
 	echom l:repo_name l:line l:file
 
+	if !a:jump_to_location
+		let l:source_ctx = s:save_source_context()
+	endif
+
 	" switch tab
 	call codenote#coderepo#goto_code_buffer(l:repo_name)
 
 	let l:line_start = split(l:line, '-')[0]
 	let l:target = codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file
-	if a:jump_to_location
-		execute 'edit ' . l:line_start . ' ' . fnameescape(l:target)
-	else
-		call s:edit_without_moving_to_match(l:target)
+	execute 'edit ' . l:line_start . ' ' . fnameescape(l:target)
+
+	if !a:jump_to_location
+		call s:restore_source_context(l:source_ctx)
 	endif
 endfunction
 
@@ -105,6 +119,10 @@ function s:GoToNoteLink(jump_to_location)
 		return
 	endif
 
+	if !a:jump_to_location
+		let l:source_ctx = s:save_source_context()
+	endif
+
 	if !codenote#coderepo#has_note_target()
 		call codenote#OpenNoteRepo()
 	else
@@ -112,10 +130,10 @@ function s:GoToNoteLink(jump_to_location)
 	endif
 
 	let l:target = bufname(l:items[0].bufnr)
-	if a:jump_to_location
-		execute 'edit +' . l:items[0].lnum . ' ' . fnameescape(l:target)
-	else
-		call s:edit_without_moving_to_match(l:target)
+	execute 'edit +' . l:items[0].lnum . ' ' . fnameescape(l:target)
+
+	if !a:jump_to_location
+		call s:restore_source_context(l:source_ctx)
 	endif
 endfunction
 
