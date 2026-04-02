@@ -43,7 +43,16 @@ function codenote#OpenNoteRepo()
 	call codenote#coderepo#OpenNoteRepo()
 endfunction
 
-function s:GoToCodeLink()
+function s:edit_without_moving_to_match(target)
+	let l:current_buf = expand('%:p')
+	let l:view = winsaveview()
+	execute 'edit ' . fnameescape(a:target)
+	if fnamemodify(a:target, ':p') ==# l:current_buf
+		call winrestview(l:view)
+	endif
+endfunction
+
+function s:GoToCodeLink(jump_to_location)
 	let l:cur = line('.')
 
 	" find code link
@@ -69,30 +78,45 @@ function s:GoToCodeLink()
 	call codenote#coderepo#goto_code_buffer(l:repo_name)
 
 	let l:line_start = split(l:line, '-')[0]
-	execute 'edit ' . l:line_start . ' ' . fnameescape(codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file)
+	let l:target = codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file
+	if a:jump_to_location
+		execute 'edit +' . l:line_start . ' ' . fnameescape(l:target)
+	else
+		call s:edit_without_moving_to_match(l:target)
+	endif
 endfunction
 
-function s:GoToNoteLink(jump_to_note)
+function s:GetNoteLinkItems()
 	let [path, repo_name] = codenote#coderepo#get_path_and_reponame_by_filename(expand("%:p"))
 	let l:file = expand("%:p")[len(path):]
 	let l:line = line(".")
 	let l:pattern = s:filepath(repo_name, l:file, l:line)
 	" 将 / 转义为 \/
 	let l:pattern = substitute(l:pattern, "/", "\\\\/", "g")
-	if a:jump_to_note
-		if !codenote#coderepo#has_note_target()
-			call codenote#OpenNoteRepo()
-		else
-			call codenote#coderepo#goto_note_buffer()
-		endif
-	endif
 
 	call setqflist([], 'f')
-	let l:flag = 'j'
-	if a:jump_to_note
-		let l:flag = ''
+	silent! exe "vim #" . l:pattern . "#j " . g:noterepo_dir . "**/*.md"
+	return getqflist()
+endfunction
+
+function s:GoToNoteLink(jump_to_location)
+	let l:items = s:GetNoteLinkItems()
+	if len(l:items) == 0
+		return
 	endif
-	silent! exe "vim #" . l:pattern . "#" . l:flag . " " . g:noterepo_dir . "**/*.md"
+
+	if !codenote#coderepo#has_note_target()
+		call codenote#OpenNoteRepo()
+	else
+		call codenote#coderepo#goto_note_buffer()
+	endif
+
+	let l:target = bufname(l:items[0].bufnr)
+	if a:jump_to_location
+		execute 'edit +' . l:items[0].lnum . ' ' . fnameescape(l:target)
+	else
+		call s:edit_without_moving_to_match(l:target)
+	endif
 endfunction
 
 function codenote#GoToCodeNoteLink(jump)
@@ -101,7 +125,7 @@ function codenote#GoToCodeNoteLink(jump)
 	endif
 	let buf_repo_type = s:get_repo_type_of_current_buffer()
 	if buf_repo_type == "note"
-		call s:GoToCodeLink()
+		call s:GoToCodeLink(a:jump)
 	elseif buf_repo_type == "code"
 		call s:GoToNoteLink(a:jump)
 	else
@@ -113,8 +137,7 @@ function codenote#PreviewNoteSnippet()
 	if !codenote#check()
 		return
 	endif
-	call s:GoToNoteLink(v:false)
-	let items = getqflist()
+	let items = s:GetNoteLinkItems()
 	if len(items) == 0
 		return
 	endif

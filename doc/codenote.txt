@@ -61,6 +61,10 @@ Keymaps~
 	<leader><C-]>
 		Jump between code and note.
 
+	<leader>]
+		Switch to the matching code or note buffer without jumping to the
+		matched location.
+
 	<leader>np
 		Preview the matching note snippet for the current code location.
 
