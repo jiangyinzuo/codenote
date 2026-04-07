@@ -183,6 +183,30 @@ function codenote#coderepo#OpenNoteRepo()
 endfunction
 
 function codenote#coderepo#goto_code_buffer(repo_name)
+	if empty(a:repo_name)
+		if s:is_window_mode()
+			let l:winnr = s:find_winnr_by_role('code')
+			if l:winnr > 0
+				call s:goto_winnr(l:winnr)
+			elseif winnr('$') == 1
+				rightbelow vsp
+				call setwinvar(win_getid(), 'codenote_role', 'code')
+				wincmd L
+			else
+				call s:goto_winnr(winnr('$'))
+				wincmd L
+			endif
+			return
+		endif
+		let l:first_repo_name = codenote#coderepo#get_first_repo_name()
+		if empty(l:first_repo_name)
+			return
+		endif
+		let l:first_repo_path = codenote#coderepo#get_path_by_repo_name(l:first_repo_name)
+		call s:ensure_repo_tab(l:first_repo_name, l:first_repo_path, 2)
+		return
+	endif
+
 	let l:path = codenote#coderepo#get_path_by_repo_name(a:repo_name)
 	if s:is_window_mode()
 		call s:ensure_role_window('code', a:repo_name, l:path)

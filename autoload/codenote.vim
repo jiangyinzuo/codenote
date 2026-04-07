@@ -77,11 +77,28 @@ function s:GoToCodeLink(jump_to_location)
 		return
 	endif
 
-	" 支持类似 src/execution/operator/aggregate/physical_hash_aggregate.cpp|478 col 7-32| 的格式
-	let l:dest = split(l:cur_line, "[:|]")
-	let l:line = '+' . split(l:dest[2])[0]
-	let l:file = l:dest[1]
-	let l:repo_name = l:dest[0]
+	let l:repo_name = ''
+	let l:file = ''
+	let l:line = ''
+	" 支持格式:
+	" 1) repo:file:line(-end)
+	" 2) repo:file|line|
+	" 3) file|line col x-y| (repo_name 为空)
+	let l:repo_dest = matchlist(l:cur_line, '^\([^:|]\+\):\([^:|]\+\)[:|]\([0-9]\+\)')
+	if !empty(l:repo_dest)
+		let l:repo_name = l:repo_dest[1]
+		let l:file = l:repo_dest[2]
+		let l:line = '+' . l:repo_dest[3]
+	else
+		let l:dest = matchlist(l:cur_line, '^\([^:|]\+\)|\([0-9]\+\)\>')
+		if !empty(l:dest)
+			let l:file = l:dest[1]
+			let l:line = '+' . l:dest[2]
+		else
+			echoerr "Invalid code link format: " . l:cur_line
+			return
+		endif
+	endif
 	echom l:repo_name l:line l:file
 
 	if !a:jump_to_location
@@ -92,7 +109,11 @@ function s:GoToCodeLink(jump_to_location)
 	call codenote#coderepo#goto_code_buffer(l:repo_name)
 
 	let l:line_start = split(l:line, '-')[0]
-	let l:target = codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file
+	if empty(l:repo_name)
+		let l:target = l:file
+	else
+		let l:target = codenote#coderepo#get_path_by_repo_name(l:repo_name) . '/' . l:file
+	endif
 	execute 'edit ' . l:line_start . ' ' . fnameescape(l:target)
 
 	if !a:jump_to_location
